@@ -147,7 +147,7 @@ ssize_t montecarlo_read(struct file *inode, char *gdata, size_t length, loff_t *
     int ret;
     char result[256];
 
-    sprintf(result, "%lu|%lu", *sum, *square_sum);
+    sprintf(result, "%lu|%lu|%hu", *sum, *square_sum, *status);
     length = strlen(result);
 
     ret = copy_to_user(gdata, result, strlen(result));
