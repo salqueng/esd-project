@@ -20,41 +20,40 @@
 #define DRIVER_MODULE_VERSION "MONTECARLO SIMULATOR v0.1"
 
 #define K_ERT_ADDRESS 0x8800F000
-#define K_ERT_ADDRESS_RANGE 0x2
+#define K_ERT_ADDRESS_RANGE 0x1000
 
-#define SIGMA_SQRT_T_ADDRESS 0x8800F004
-#define SIGMA_SQRT_T_ADDRESS_RANGE 0x2
+#define SIGMA_SQRT_T_ADDRESS 0x8800D000
+#define SIGMA_SQRT_T_ADDRESS_RANGE 0x1000
 
-#define S_E05_SIGMA_T_ADDRESS 0x8800F002
-#define S_E05_SIGMA_T_ADDRESS_RANGE 0x2
+#define S_E05_SIGMA_T_ADDRESS 0x8800E000
+#define S_E05_SIGMA_T_ADDRESS_RANGE 0x1000
 
-#define M_COUNT_ADDRESS 0x8800F006
-#define M_COUNT_ADDRESS_RANGE 0x4 //4-byte
+#define M_COUNT_ADDRESS 0x8800C000
+#define M_COUNT_ADDRESS_RANGE 0x1000
 
 //Sum, Sum Square
-#define SUM_ADDRESS 0x8800F010
-#define SUM_ADDRESS_RANGE 0x8
+#define SUM_ADDRESS 0x8800A000
+#define SUM_ADDRESS_RANGE 0x1000
 
-#define SQUARE_SUM_ADDRESS 0x8800F020
-#define SQUARE_SUM_ADDRESS_RANGE 0x8
+#define SQUARE_SUM_ADDRESS 0x88009000
+#define SQUARE_SUM_ADDRESS_RANGE 0x1000
 
 //Mode
-#define MODE_ADDRESS 0x8800F020
-#define MODE_ADDRESS_RANGE 0x2
+#define MODE_ADDRESS 0x8800B000
+#define MODE_ADDRESS_RANGE 0x1000
 
 #define MODE_0_STOP 0
 #define MODE_1_START 1
 
 //Status
-#define STATUS_ADDRESS 0x8800F022
-#define STATUS_ADDRESS_RANGE 0x2
+#define STATUS_ADDRESS 0x88008000
+#define STATUS_ADDRESS_RANGE 0x1000
 
 #define STATUS_0_WORKING 0
 #define STATUS_1_FINISHED 1
 
 #define IOCTL_10_STOP 0x10
 #define IOCTL_11_START 0x11
-#define IOCTL_20_STATUS 0x20
 
 static unsigned short *k_ert;
 static unsigned short *sigma_sqrt_t;
@@ -69,15 +68,15 @@ static unsigned short *status;
 
 static int montecarlo_usage;
 
-void print_current_status(void) {
-    printk(KERN_INFO"K_ERT:                   %hu", *k_ert);
-    printk(KERN_INFO"SIGMA_SQRT_T:            %hu", *sigma_sqrt_t);
-    printk(KERN_INFO"S_E05_SIGMA_T:           %hu", *s_e05_sigma_t);
-    printk(KERN_INFO"M_count (divided by 5):  %u", *M_count);
-    printk(KERN_INFO"SUM:                     %lu", *sum);
-    printk(KERN_INFO"SQUARE_SUM:              %lu", *square_sum);
-    printk(KERN_INFO"MODE:                    %hu", *mode);
-    printk(KERN_INFO"STATUS:                  %hu", *status);
+void printk_current_status(void) {
+    printk(KERN_INFO"K_ERT:                   %hu\n", *k_ert);
+    printk(KERN_INFO"SIGMA_SQRT_T:            %hu\n", *sigma_sqrt_t);
+    printk(KERN_INFO"S_E05_SIGMA_T:           %hu\n", *s_e05_sigma_t);
+    printk(KERN_INFO"M_count (divided by 5):  %u\n", *M_count);
+    printk(KERN_INFO"SUM:                     %lu\n", *sum);
+    printk(KERN_INFO"SQUARE_SUM:              %lu\n", *square_sum);
+    printk(KERN_INFO"MODE:                    %hu\n", *mode);
+    printk(KERN_INFO"STATUS:                  %hu\n", *status);
 }
 
 int montecarlo_open(struct inode *inode, struct file *flip) {
@@ -102,16 +101,16 @@ int montecarlo_open(struct inode *inode, struct file *flip) {
         ! check_mem_region((unsigned long)square_sum, SQUARE_SUM_ADDRESS_RANGE) &&
         ! check_mem_region((unsigned long)mode, MODE_ADDRESS_RANGE) &&
         ! check_mem_region((unsigned long)status, STATUS_ADDRESS_RANGE)) {
-        request_mem_region((unsigned long)k_ert, K_ERT_ADDRESS_RANGE, DRIVER_NAME);
-        request_mem_region((unsigned long)sigma_sqrt_t,
+        request_region((unsigned long)k_ert, K_ERT_ADDRESS_RANGE, DRIVER_NAME);
+        request_region((unsigned long)sigma_sqrt_t,
                            SIGMA_SQRT_T_ADDRESS_RANGE, DRIVER_NAME);
-        request_mem_region((unsigned long)s_e05_sigma_t,
+        request_region((unsigned long)s_e05_sigma_t,
                            S_E05_SIGMA_T_ADDRESS_RANGE, DRIVER_NAME);
-        request_mem_region((unsigned long)M_count, M_COUNT_ADDRESS_RANGE, DRIVER_NAME);
-        request_mem_region((unsigned long)sum, SUM_ADDRESS_RANGE, DRIVER_NAME);
-        request_mem_region((unsigned long)square_sum, SQUARE_SUM_ADDRESS_RANGE, DRIVER_NAME);
-        request_mem_region((unsigned long)mode, MODE_ADDRESS_RANGE, DRIVER_NAME);
-        request_mem_region((unsigned long)status, STATUS_ADDRESS_RANGE, DRIVER_NAME);
+        request_region((unsigned long)M_count, M_COUNT_ADDRESS_RANGE, DRIVER_NAME);
+        request_region((unsigned long)sum, SUM_ADDRESS_RANGE, DRIVER_NAME);
+        request_region((unsigned long)square_sum, SQUARE_SUM_ADDRESS_RANGE, DRIVER_NAME);
+        request_region((unsigned long)mode, MODE_ADDRESS_RANGE, DRIVER_NAME);
+        request_region((unsigned long)status, STATUS_ADDRESS_RANGE, DRIVER_NAME);
     } else {
         printk(KERN_WARNING"Can't get IO Region!");
     }
@@ -130,14 +129,14 @@ int montecarlo_release(struct inode *inode, struct file *flip) {
     iounmap(mode);
     iounmap(status);
 
-    release_mem_region((unsigned long)k_ert, K_ERT_ADDRESS_RANGE);
-    release_mem_region((unsigned long)sigma_sqrt_t, SIGMA_SQRT_T_ADDRESS_RANGE);
-    release_mem_region((unsigned long)s_e05_sigma_t, S_E05_SIGMA_T_ADDRESS_RANGE);
-    release_mem_region((unsigned long)M_count, M_COUNT_ADDRESS_RANGE);
-    release_mem_region((unsigned long)sum, SUM_ADDRESS_RANGE);
-    release_mem_region((unsigned long)square_sum, SQUARE_SUM_ADDRESS_RANGE);
-    release_mem_region((unsigned long)mode, MODE_ADDRESS_RANGE);
-    release_mem_region((unsigned long)status, STATUS_ADDRESS_RANGE);
+    release_region((unsigned long)k_ert, K_ERT_ADDRESS_RANGE);
+    release_region((unsigned long)sigma_sqrt_t, SIGMA_SQRT_T_ADDRESS_RANGE);
+    release_region((unsigned long)s_e05_sigma_t, S_E05_SIGMA_T_ADDRESS_RANGE);
+    release_region((unsigned long)M_count, M_COUNT_ADDRESS_RANGE);
+    release_region((unsigned long)sum, SUM_ADDRESS_RANGE);
+    release_region((unsigned long)square_sum, SQUARE_SUM_ADDRESS_RANGE);
+    release_region((unsigned long)mode, MODE_ADDRESS_RANGE);
+    release_region((unsigned long)status, STATUS_ADDRESS_RANGE);
 
     montecarlo_usage = 0;
     return 0;
@@ -147,13 +146,18 @@ ssize_t montecarlo_read(struct file *inode, char *gdata, size_t length, loff_t *
     int ret;
     char result[256];
 
+    printk(KERN_INFO"Read Started\n");
+
     sprintf(result, "%lu|%lu|%hu", *sum, *square_sum, *status);
     length = strlen(result);
 
     ret = copy_to_user(gdata, result, strlen(result));
     if (ret < 0) {
+        printk(KERN_WARNING"Read Failed\n");
         return -1;
     }
+    printk(KERN_INFO"Read Finished\n");
+    printk_current_status();
 
     return length;
 }
@@ -162,22 +166,35 @@ ssize_t montecarlo_write(struct file *inode,
                          const char *gdata, size_t length, loff_t *off_what) {
     unsigned int ret;
     unsigned int M_original;
-    char result[256];
+    unsigned int k_ert_original, sigma_sqrt_t_original, s_e05_sigma_t_original;
+    char result[length];
 
-    ret = copy_from_user(result, gdata, 4);
+    printk(KERN_INFO"Write Started\n");
+    ret = copy_from_user(result, gdata, length);
     if (ret < 0) {
+        printk(KERN_WARNING"Write Failed\n");
         return -1;
     }
-    sscanf(result, "%hu|%hu|%hu|%d", k_ert, sigma_sqrt_t, s_e05_sigma_t, &M_original);
+    printk("Data: %s", result);
+    sscanf(result, "%hu|%hu|%hu|%u", &k_ert_original, &sigma_sqrt_t_original, &s_e05_sigma_t_original, &M_original);
+
+    printk(KERN_INFO"DATA: %hu %hu %hu %u ", k_ert_original, sigma_sqrt_t_original, s_e05_sigma_t_original, M_original);
+
+    *k_ert = k_ert_original;
+    *sigma_sqrt_t = sigma_sqrt_t_original;
+    *s_e05_sigma_t = s_e05_sigma_t_original;
 
     //divided by 5
     *M_count = M_original / 5;
+    printk(KERN_INFO"Write Finished\n");
+    printk_current_status();
 
     return length;
 }
 
 static int montecarlo_ioctl(struct inode *inode,
                             struct file *flip, unsigned int cmd, unsigned long arg) {
+    printk(KERN_INFO"IOCTL Started: %u\n", cmd);
     switch (cmd) {
     case IOCTL_10_STOP:
         *mode = MODE_0_STOP;
@@ -185,13 +202,12 @@ static int montecarlo_ioctl(struct inode *inode,
     case IOCTL_11_START:
         *mode = MODE_1_START;
         break;
-    case IOCTL_20_STATUS:
-        print_current_status();
-        break;
     default:
+        printk(KERN_WARNING"IOCTL Failed\n");
         return -EINVAL;
     }
-    print_current_status();
+    printk(KERN_INFO"IOCTL Finished\n");
+    printk_current_status();
     return 0;
 }
 
