@@ -33,7 +33,7 @@ module montecarlo(input clk, input nreset,
 	PresentValue pv_block_3(clk, nreset, KerT, Se05sigmaT, sigmaSqrtT, normal_3, present_val_3);
 	math math_3(clk, nreset, present_val_3, sum_3, sum_square_3, Mode, Status);
 	
-	defparam ng_block_4.seed = 12'b100011011001;
+	defparam ng_block_4.seed = 10'b100011011001;
 	NormalGenerator ng_block_4(clk, nreset, normal_4);
 	PresentValue pv_block_4(clk, nreset, KerT, Se05sigmaT, sigmaSqrtT, normal_4, present_val_4);
 	math math_4(clk, nreset, present_val_4, sum_4, sum_square_4, Mode, Status);

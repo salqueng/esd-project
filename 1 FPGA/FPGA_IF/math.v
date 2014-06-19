@@ -3,7 +3,7 @@ module math(input clk, input nreset, input[15:0] data_in,
 				input mode, input status);
 	reg [63:0] sum; 
 	reg [63:0] sum_square;
-
+	reg [31:0] square;
 	assign sum_out = sum;
 	assign sum_square_out = sum_square;
 	
@@ -11,8 +11,10 @@ module math(input clk, input nreset, input[15:0] data_in,
 		if (nreset == 1'b0) begin
 			sum <= 64'b0;
 			sum_square <= 64'b0;
+			square <= 64'b0;
 		end else if(mode == 1'b0) begin
 			sum <= 64'b0;
+			square <= 64'b0;
 			sum_square <= 64'b0;
 		end else begin
 			if(status == 1'b0 && mode == 1'b1) begin	

@@ -9,12 +9,8 @@ module sum_merge(input clk, input nreset,
 			sum_out <= 0;
 			sum_square_out <= 0;
 		end else begin
-			sum_temp_1 <= sum_0 + sum_1;
-			sum_temp_2 <= sum_2 + sum_3 + sum_4;
-			sum_out <= sum_temp_1 + sum_temp_2;
-			sum_square_temp_1 <= sum_square_0 + sum_square_1;
-			sum_square_temp_2 <= sum_square_2 + sum_square_3 + sum_square_4;
-			sum_square_out <= sum_square_temp_1 + sum_square_temp_2;
+			sum_out <= sum_0 + sum_1 + sum_2 + sum_3 + sum_4;
+			sum_square_out <= sum_square_0 + sum_square_1 + sum_square_2 + sum_square_3 + sum_square_4;
 		end
 	end
 endmodule
