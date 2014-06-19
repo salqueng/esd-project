@@ -14,10 +14,10 @@ Java_esd2014_montecarlo_team5_BlackScholesActivity_MCWrite(JNIEnv* env, jobject
 		this, jstring data) {
 	int dev, ret;
 	dev = open("/dev/montecarlo", O_RDWR|O_SYNC);
-	char *result = (*env) -> GetStringUTFChars(env, data, NULL);
+	const char *result = (*env) -> GetStringUTFChars(env, data, NULL);
 	
 	if (dev != -1) {
-		ret = write(dev, result, strlen(result)+1);
+		ret = write(dev, result, 256);
 		close(dev);
 	} else {
 		__android_log_print(ANDROID_LOG_ERROR, "BlackScholesActivity", "Device Open ERROR!\n");
@@ -44,11 +44,20 @@ Java_esd2014_montecarlo_team5_BlackScholesActivity_MCIOControl(JNIEnv* env, jobj
 jstring
 Java_esd2014_montecarlo_team5_BlackScholesActivity_MCRead(JNIEnv* env, jobject this) {
 	int dev, ret;
+	char result[1024] = {0};
 	jstring data;
-	dev = open("/dev/montecarlo", O_RDONLY);
+	dev = open("/dev/montecarlo", O_RDWR|O_SYNC);
 
 	if (dev != -1) {
-		ret = read(dev, &data, 4);
+		ret = read(dev, result, 1024);
+		if (ret < -1) {
+			__android_log_print(ANDROID_LOG_DEBUG, "BlackScholesActivity",
+					"Read Failed\n");
+		}
+		__android_log_print(ANDROID_LOG_DEBUG, "BlackScholesActivity",
+				"result: %s", result);
+		data = (*env) -> NewStringUTF(env, result);
+		__android_log_print(ANDROID_LOG_DEBUG, "BlackScholesActivity", "!?\n");
 		close(dev);
 	} else {	
 		__android_log_print(ANDROID_LOG_ERROR, "BlackScholesActivity", "Device Open ERROR!\n");
