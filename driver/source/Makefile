@@ -1,6 +1,6 @@
 CC = /usr/local/arm/arm-2010q1/bin/arm-none-eabi-gcc
 obj-m := montecarlo.o
-KDIR := /Android/linux-2.6.35-hanback
+KDIR := /android/linux-2.6.35-hanback
 PWD := $(shell pwd)
 
 
