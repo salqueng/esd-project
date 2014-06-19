@@ -7,6 +7,7 @@
 //#include <linux/fcntl.h>
 #include <linux/ioport.h>
 #include <linux/delay.h>
+
 //#include <asm/fcntl.h>
 #include <asm/uaccess.h>
 #include <asm/io.h>
@@ -18,32 +19,9 @@
 #define MONTECARLO_NAME "MONTECARLO"
 #define MONTECARLO_MODULE_VERSION "MONTECARLO SIMULATOR v0.1"
 
-#define KERT_ADDRESS 0x88000100
-#define KERT_RANGE 0x2
+#define MONTECARLO_ADDRESS 0x88000100
+#define MONTECARLO_RANGE 0x2000
 
-#define SIGMA_SQRT_T_ADDRESS 0x88000102
-#define SIGMA_SQRT_T_RANGE 0x2
-
-#define S_E05_SIGMA_T_ADDRESS 0x88000104
-#define S_E05_SIGMA_T_RANGE 0x2
-
-#define M_COUNT_ADDRESS 0x88000106
-#define M_COUNT_RANGE 0x4
-
-#define SUM_ADDRESS 0x8800010E
-#define SUM_RANGE 0x8
-
-#define SQUARE_SUM_ADDRESS 0x88000116
-#define SQUARE_SUM_RANGE 0x8
-
-#define MODE_ADDRESS 0x8800010a
-#define MODE_RANGE 0x2
-
-#define STATUS_ADDRESS 0x8800011e
-#define STATUS_RANGE 0x2
-
-#define CURRENT_COUNT_ADDRESS 0x88000120
-#define CURRENT_COUNT_RANGE 0x4
 
 #define MODE_0_STOP 0
 #define MODE_1_START 1
@@ -54,14 +32,16 @@
 #define IOCTL_10_STOP 0x10
 #define IOCTL_11_START 0x11
 
+static void* montecarlo_region;
+
 static unsigned short *k_ert;
 static unsigned short *sigma_sqrt_t;
 static unsigned short *s_e05_sigma_t;
-static unsigned int *m_count;
+static unsigned int *M_count;
 
 
-static unsigned long long *sum;
-static unsigned long long *square_sum;
+static unsigned long *sum;
+static unsigned long *square_sum;
 
 static unsigned short *mode;
 static unsigned short *status;
@@ -74,9 +54,9 @@ void printk_current_status(void) {
     printk(KERN_INFO"K_ERT:                   %hu\n", *k_ert);
     printk(KERN_INFO"SIGMA_SQRT_T:            %hu\n", *sigma_sqrt_t);
     printk(KERN_INFO"S_E05_SIGMA_T:           %hu\n", *s_e05_sigma_t);
-    printk(KERN_INFO"M_count (divided by 5):  %u\n", *m_count);
-    printk(KERN_INFO"SUM:                     %llu\n", *sum);
-    printk(KERN_INFO"SQUARE_SUM:              %llu\n", *square_sum);
+    printk(KERN_INFO"M_count (divided by 5):  %u\n", *M_count);
+    printk(KERN_INFO"SUM:                     %lu\n", *sum);
+    printk(KERN_INFO"SQUARE_SUM:              %lu\n", *square_sum);
     printk(KERN_INFO"MODE:                    %hu\n", *mode);
     printk(KERN_INFO"STATUS:                  %hu\n", *status);
 	printk(KERN_INFO"CURRENT_COUNT:           %u\n", *current_count);
@@ -84,64 +64,39 @@ void printk_current_status(void) {
 
 int montecarlo_open(struct inode *inode, struct file *flip) {
     if (montecarlo_usage !=0) return -EBUSY;
-	
-	k_ert = ioremap(KERT_ADDRESS, KERT_RANGE);
-	sigma_sqrt_t = ioremap(SIGMA_SQRT_T_ADDRESS, SIGMA_SQRT_T_RANGE);
-	s_e05_sigma_t = ioremap(S_E05_SIGMA_T_ADDRESS, S_E05_SIGMA_T_RANGE);
-	m_count = ioremap(M_COUNT_ADDRESS, M_COUNT_RANGE); 
-	sum = ioremap(SUM_ADDRESS, SUM_RANGE); 
-	square_sum = ioremap(SQUARE_SUM_ADDRESS, SQUARE_SUM_RANGE); 
-	mode = ioremap(MODE_ADDRESS, MODE_RANGE); 
-	status = ioremap(STATUS_ADDRESS, STATUS_RANGE);
-	current_count = ioremap(CURRENT_COUNT_ADDRESS, CURRENT_COUNT_RANGE); 
-	if (!check_mem_region((unsigned long)k_ert,KERT_RANGE)
-	&& !check_mem_region((unsigned long)sigma_sqrt_t,SIGMA_SQRT_T_RANGE)
-	&& !check_mem_region((unsigned long)s_e05_sigma_t,S_E05_SIGMA_T_RANGE)
-	&& !check_mem_region((unsigned long)m_count,M_COUNT_RANGE)
-	&& !check_mem_region((unsigned long)sum,SUM_RANGE)
-	&& !check_mem_region((unsigned long)square_sum,SQUARE_SUM_RANGE)
-	&& !check_mem_region((unsigned long)mode,MODE_RANGE)
-	&& !check_mem_region((unsigned long)status,STATUS_RANGE)
-	&& !check_mem_region((unsigned long)current_count,CURRENT_COUNT_RANGE))
-	{
-		request_mem_region((unsigned long)k_ert, KERT_RANGE,MONTECARLO_NAME);
-		request_mem_region((unsigned long)sigma_sqrt_t,SIGMA_SQRT_T_RANGE,MONTECARLO_NAME);
-		request_mem_region((unsigned long)s_e05_sigma_t,S_E05_SIGMA_T_RANGE,MONTECARLO_NAME);
-		request_mem_region((unsigned long)m_count,M_COUNT_RANGE,MONTECARLO_NAME);
-		request_mem_region((unsigned long)sum,SUM_RANGE,MONTECARLO_NAME);
-		request_mem_region((unsigned long)square_sum,SQUARE_SUM_RANGE,MONTECARLO_NAME);
-		request_mem_region((unsigned long)mode,MODE_RANGE,MONTECARLO_NAME);
-		request_mem_region((unsigned long)status,STATUS_RANGE,MONTECARLO_NAME);
-		request_mem_region((unsigned long)current_count,CURRENT_COUNT_RANGE,MONTECARLO_NAME);	
+
+	montecarlo_region = ioremap(MONTECARLO_ADDRESS, MONTECARLO_RANGE);
+	if (!check_mem_region((unsigned long)montecarlo_region,
+				MONTECARLO_RANGE)) {
+		request_region((unsigned long)montecarlo_region, MONTECARLO_RANGE, MONTECARLO_NAME);
 	}
+
+    k_ert = (unsigned short*) (montecarlo_region);
+    sigma_sqrt_t = (unsigned short *)(montecarlo_region + 0x2);
+    s_e05_sigma_t = (unsigned short *)(montecarlo_region + 0x4);
+    M_count = (unsigned int *)(montecarlo_region + 0x6);
+    mode = (unsigned short *)(montecarlo_region + 0xA);
+
+    sum = (unsigned long *)(montecarlo_region + 0xE);
+    square_sum = (unsigned long *)(montecarlo_region + 0x16);
+    status = (unsigned short *)(montecarlo_region + 0x1E);
+
+	current_count = (unsigned int *)(montecarlo_region + 0x20);
+
 	printk(KERN_INFO"Open");
+	printk_current_status();
     montecarlo_usage = 1;
     return 0;
 }
 
 int montecarlo_release(struct inode *inode, struct file *flip) {
-	iounmap(k_ert);
-	iounmap(sigma_sqrt_t);
-	iounmap(s_e05_sigma_t);
-	iounmap(m_count);
-	iounmap(sum);
-	iounmap(square_sum);
-	iounmap(mode);
-	iounmap(status);
-	iounmap(current_count);
+	iounmap((void *)(montecarlo_region));
+	release_region((unsigned long)montecarlo_region, MONTECARLO_RANGE);
 
-	release_mem_region((unsigned long)k_ert,KERT_RANGE);
-	release_mem_region((unsigned long)sigma_sqrt_t,SIGMA_SQRT_T_RANGE);
-	release_mem_region((unsigned long)s_e05_sigma_t,S_E05_SIGMA_T_RANGE);
-	release_mem_region((unsigned long)m_count,M_COUNT_RANGE);
-	release_mem_region((unsigned long)sum,SUM_RANGE);
-	release_mem_region((unsigned long)square_sum,SQUARE_SUM_RANGE);
-	release_mem_region((unsigned long)mode,MODE_RANGE);
-	release_mem_region((unsigned long)status,STATUS_RANGE);
-	release_mem_region((unsigned long)current_count,CURRENT_COUNT_RANGE);	
-    
-	montecarlo_usage = 0;
+
+    montecarlo_usage = 0;
 	printk(KERN_INFO"Release");
+	printk_current_status();
     return 0;
 }
 
@@ -150,7 +105,7 @@ ssize_t montecarlo_read(struct file *inode, char *gdata, size_t length, loff_t *
     char result[256];
     printk(KERN_INFO"Read Started\n");
 
-    sprintf(result, "%llu|%llu|%hu", *sum, *square_sum, *status);
+    sprintf(result, "%lu|%lu|%hu", *sum, *square_sum, *status);
 
 	
     ret = copy_to_user(gdata, result, strlen(result));
@@ -167,9 +122,11 @@ ssize_t montecarlo_read(struct file *inode, char *gdata, size_t length, loff_t *
 ssize_t montecarlo_write(struct file *inode,
                          const char *gdata, size_t length, loff_t *off_what) {
     unsigned int ret;
-    unsigned int m_original;
-	unsigned short *m_count_up = (unsigned short *)((void *)m_count + 2);
-	unsigned short *m_count_down = (unsigned short *)((void *)m_count);
+    unsigned int M_original;
+	unsigned short *M_count_up = (unsigned short *)((void *)M_count + 2);
+	unsigned short *M_count_down = (unsigned short *)(M_count);
+
+   	unsigned short k_ert_original, sigma_sqrt_t_original, s_e05_sigma_t_original;
     char result[length];
 
     printk(KERN_INFO"Write Started\n");
@@ -180,12 +137,11 @@ ssize_t montecarlo_write(struct file *inode,
     }
     printk("Data: %s", result);
     sscanf(result, "%hu|%hu|%hu|%u", k_ert, sigma_sqrt_t, s_e05_sigma_t,
-			&m_original);
+			&M_original);
 	
-	m_original = m_original / 5;
-	*m_count_up = (unsigned short)(m_original >> 16);
-	*m_count_down = (unsigned short)(m_original);
-
+	M_original = M_original / 5;
+	*M_count_up = (unsigned short)(M_original >> 16);
+	*M_count_down = (unsigned short)(M_original);
     printk(KERN_INFO"Write Finished\n");
     printk_current_status();
 
@@ -222,6 +178,8 @@ struct file_operations montecarlo_fops = {
 
 int montecarlo_init(void) {
     int result;
+
+
 
     result = register_chrdev(MONTECARLO_MAJOR, MONTECARLO_NAME, &montecarlo_fops);
     if (result < 0) {
